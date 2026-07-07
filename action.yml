@@ -1,0 +1,80 @@
+name: '[ACTION] Deploy to GitHub Pages'
+description: 'Convert Markdown to HTML using Pandoc, modify internal .md links to .html, copy assets (images, favicon, robots.txt, index.html), and deploy to GitHub Pages. Outputs workflow run ID and artifact absolute path.'
+author: 'Godners-Code'
+branding:
+  icon: 'upload'
+  color: 'blue'
+
+inputs:
+  page-title:
+    description: 'Page Title (Defaults as Repository Name'
+    required: false
+    default: ${{ github.event.repository.name }}
+  image-src:
+    description: 'Source Images Path (Default as "Images")'
+    required: false
+    default: 'Images'
+  image-dst:
+    description: 'Destination Image Path (Default as "Images")'
+    required: false
+    default: 'Images'
+  icons-src:
+    description: 'Source Icon Path (Default as "favicon.jpg")'
+    required: false
+    default: 'favicon.jpg'
+  robot-src:
+    description: 'Source Icon Path (Default as "robots.txt")'
+    required: false
+    default: 'robots.txt
+  ex-dir:
+    description: 'Exclude Paths (Embedded _site, .git, .github)
+    required: false
+    default: ''
+
+outputs:
+  run-id:
+    description: 'GitHub Workflow Run ID'
+    value: ${{ github.run_id }}
+  artifact-path:
+    description: 'Artifact Download Path'
+    value: ${{ steps.set-artifact-path.outputs.artifact_path }}
+
+runs:
+  using: 'composite'
+  steps:
+    - name: "[STEP] Checkout Repository"
+      uses: actions/checkout@main
+    - name: "[STEP] Setup Pandoc"
+      uses: pandoc/actions/setup@main"
+    - name: "[STEP] Setup Python
+      uses: actions/setup-python@main"
+    - name: "[STEP] Run Deploy Script
+      shell: bash
+      run: python deploy.py
+      env:
+        INPUT_IMAGE_SRC: ${{ inputs.image-src }}
+        INPUT_IMAGE_DST: ${{ inputs.image-dst }}
+        INPUT_ICONS_SRC: ${{ inputs.icons-src }}
+        INPUT_EX_DIR: ${{ inputs.ex-dir }}
+
+    - name: "[STEP] Setup Pages"
+      uses: actions/configure-pages@v5
+
+    - name: "[STEP] Upload Artifact"
+      id: upload-artifact
+      uses: actions/upload-pages-artifact@main
+      with:
+        path: ./_site
+
+    - name: "[STEP] Set Artifact Absolute Path"
+      id: set-artifact-path
+      shell: bash
+      run: |
+        ARTIFACT_PATH=$(realpath ./_site 2>/dev/null || echo "$(pwd)/_site")
+        echo "artifact_path=$ARTIFACT_PATH" >> $GITHUB_OUTPUT
+        echo "GitHub Workflow Run ID: ${{ github.run_id }} >> $GITHUB_SUMMARY"
+        echo "Absolute artifact path: $ARTIFACT_PATH" >> $GITHUB_SUMMARY
+
+    - name: "[STEP] Deploy to GitHub Pages"
+      id: deployment
+      uses: actions/deploy-pages@main
