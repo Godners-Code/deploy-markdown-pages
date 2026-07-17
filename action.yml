@@ -1,5 +1,5 @@
-name: '[ACTION] Deploy to GitHub Pages'
-description: 'Convert Markdown to HTML using Pandoc, modify internal .md links to .html, copy assets (images, favicon, robots.txt, index.html), and deploy to GitHub Pages. Outputs workflow run ID and artifact absolute path.'
+name: 'Markdown to GitHub Pages Deploy'
+description: 'Convert Markdown files to HTML with Pandoc and deploy to GitHub Pages.'
 author: 'Godners-Code'
 branding:
   icon: 'upload'
@@ -7,7 +7,7 @@ branding:
 
 inputs:
   page-title:
-    description: 'Page Title (Defaults as Repository Name'
+    description: 'Page Title (Defaults as Repository Name)'
     required: false
     default: ${{ github.event.repository.name }}
   image-src:
@@ -18,62 +18,56 @@ inputs:
     description: 'Destination Image Path (Default as "Images")'
     required: false
     default: 'Images'
+  home-target:
+    description: 'Source HomePage Path (Default as "./README.html")'
+    required: false
+    default: './README.html'
   icons-src:
     description: 'Source Icon Path (Default as "favicon.jpg")'
     required: false
     default: 'favicon.jpg'
   robot-src:
-    description: 'Source Icon Path (Default as "robots.txt")'
+    description: 'Source robots.txt Path (Default as "robots.txt")'
     required: false
-    default: 'robots.txt
+    default: 'robots.txt'
   ex-dir:
-    description: 'Exclude Paths (Embedded _site, .git, .github)
+    description: 'Exclude Paths (Embedded _site, .git, .github)'
     required: false
     default: ''
-
-outputs:
-  run-id:
-    description: 'GitHub Workflow Run ID'
-    value: ${{ github.run_id }}
-  artifact-path:
-    description: 'Artifact Download Path'
-    value: ${{ steps.set-artifact-path.outputs.artifact_path }}
 
 runs:
   using: 'composite'
   steps:
-    - name: "[STEP] Checkout Repository"
-      uses: actions/checkout@main
     - name: "[STEP] Setup Pandoc"
-      uses: pandoc/actions/setup@main"
-    - name: "[STEP] Setup Python
-      uses: actions/setup-python@main"
-    - name: "[STEP] Run Deploy Script
+      uses: pandoc/actions/setup@main
+
+    - name: "[STEP] Setup Python"
+      uses: actions/setup-python@main
+
+    - name: "[STEP] Install Dependencies"
       shell: bash
-      run: python deploy.py
+      run: pip install --upgrade pip jinja2
+
+    - name: "[STEP] Run Deploy Script"
+      shell: bash
+      run: python ${{ github.action_path }}/deploy.py
       env:
+        INPUT_PAGE_TITLE: ${{ inputs.page-title }}
         INPUT_IMAGE_SRC: ${{ inputs.image-src }}
         INPUT_IMAGE_DST: ${{ inputs.image-dst }}
+        INPUT_HOME_SRC: ${{ inputs.home-target }}
         INPUT_ICONS_SRC: ${{ inputs.icons-src }}
+        INPUT_ROBOT_SRC: ${{ inputs.robot-src }}
         INPUT_EX_DIR: ${{ inputs.ex-dir }}
 
     - name: "[STEP] Setup Pages"
-      uses: actions/configure-pages@v5
+      uses: actions/configure-pages@main
 
     - name: "[STEP] Upload Artifact"
       id: upload-artifact
       uses: actions/upload-pages-artifact@main
       with:
         path: ./_site
-
-    - name: "[STEP] Set Artifact Absolute Path"
-      id: set-artifact-path
-      shell: bash
-      run: |
-        ARTIFACT_PATH=$(realpath ./_site 2>/dev/null || echo "$(pwd)/_site")
-        echo "artifact_path=$ARTIFACT_PATH" >> $GITHUB_OUTPUT
-        echo "GitHub Workflow Run ID: ${{ github.run_id }} >> $GITHUB_SUMMARY"
-        echo "Absolute artifact path: $ARTIFACT_PATH" >> $GITHUB_SUMMARY
 
     - name: "[STEP] Deploy to GitHub Pages"
       id: deployment
